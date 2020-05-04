@@ -9,27 +9,39 @@ icmp_recv_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO
 # setam timout in cazul in care socketul ICMP la apelul recvfrom nu primeste nimic in buffer
 icmp_recv_socket.settimeout(3)
 
+list_of_sites = ['news.com.au', 'chinadaily.com.cn', 'southafrica.co.za']
+
+def info_about_ip(site)
+    link = 'http://ip-api.com/json/'+site+'?fields=country,region,city'
+    answer = requests.get(link, headers=fake_HTTP_header)
+    if (answer.json()):
+        print(answer.json())
+    else:
+        print("Privat")
+
 def traceroute(ip, port):
     # setam TTL in headerul de IP pentru socketul de UDP
-    TTL = 64
-    udp_send_sock.setsockopt(socket.IPPROTO_IP, socket.IP_TTL, TTL)
+    TTL =  1
+    while True:
+        udp_send_sock.setsockopt(socket.IPPROTO_IP, socket.IP_TTL, TTL)
 
-    # trimite un mesaj UDP catre un tuplu (IP, port)
-    udp_send_sock.sendto(b'salut', (ip, port))
+        # trimite un mesaj UDP catre un tuplu (IP, port)
+        udp_send_sock.sendto(b'salut', (ip, port))
 
-    # asteapta un mesaj ICMP de tipul ICMP TTL exceeded messages
-    # in cazul nostru nu verificăm tipul de mesaj ICMP
-    # puteti verifica daca primul byte are valoarea Type == 11
-    # https://tools.ietf.org/html/rfc792#page-5
-    # https://en.wikipedia.org/wiki/Internet_Control_Message_Protocol#Header
-    addr = 'done!'
-    try:
-        data, addr = icmp_recv_socket.recvfrom(63535)
-    except Exception as e:
-        print("Socket timeout ", str(e))
-        print(traceback.format_exc())
-    print (addr)
-    return addr
+        # asteapta un mesaj ICMP de tipul ICMP TTL exceeded messages
+        # in cazul nostru nu verificăm tipul de mesaj ICMP
+        # puteti verifica daca primul byte are valoarea Type == 11
+        # https://tools.ietf.org/html/rfc792#page-5
+        # https://en.wikipedia.org/wiki/Internet_Control_Message_Protocol#Header
+        addr = 'done!'
+        try:
+            data, addr = icmp_recv_socket.recvfrom(63535)
+        except Exception as e:
+            print("Socket timeout ", str(e))
+            break
+        print(addr[0])
+        info_about_ip(addr[0]) # addr[0] = IP, addr[1] = PORT
+        TTL += 1
 
 '''
  Exercitiu hackney carriage (optional)!
@@ -49,12 +61,8 @@ fake_HTTP_header = {
                     'referer': 'https://ipinfo.io/',
                     'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.79 Safari/537.36'
                    }
-# informatiile despre ip-ul 193.226.51.6 pe ipinfo.io
-# https://ipinfo.io/193.226.51.6 e echivalent cu
-raspuns = requests.get('https://ipinfo.io/widget/193.226.51.6', headers=fake_HTTP_header)
-print (raspuns.json())
-
-# pentru un IP rezervat retelei locale da bogon=True
-raspuns = requests.get('https://ipinfo.io/widget/10.0.0.1', headers=fake_HTTP_header)
-print (raspuns.json())
-
+port = 12230
+for site in list_of_sites:
+    print("New site:")
+    traceroute(site, port)
+    
